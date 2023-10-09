@@ -95,6 +95,10 @@ public:
                 for (auto r : event.receiverList)
                 {
                     event.sender = name;
+                    if(processes.find(r) == processes.end()) {
+                        cerr<<"Receiver "<<r<<" does not exist! "<< endl;
+                        exit(1);
+                    }
                     processes[r].updateMsgQ(event);
                     log += r;
                 }
