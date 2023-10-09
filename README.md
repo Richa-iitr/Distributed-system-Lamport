@@ -94,7 +94,7 @@ begin process p2
 recv p1 m1
 end process
 ```
-![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/adbb9b7a-954b-4d56-8307-2a113dc54e99)
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/1f9a4a71-8bba-414b-b32b-d59d069f9310)
 
 6
 ```
@@ -114,7 +114,7 @@ begin process p4
 recv p1 m4
 end process
 ```
-![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/8524fb24-359b-4e94-ac7d-d4eb5ccefd37)
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/960206af-ec68-44c6-af14-8addec72e834)
 
 7
 ```
@@ -133,5 +133,4 @@ end process
 ```
 ![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/42f86ecd-fe86-44be-a832-bed03768d4d3)
 
-8
 
