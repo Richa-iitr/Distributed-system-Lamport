@@ -1,12 +1,13 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-
 vector<string> logs;
 queue<string> pending;
-map<string,string> wfg;
-map<string,bool> visited;
+map<string, string> wfg;
+map<string, bool> visited;
+map<string, bool> completed;
 
+string detectCycle(string name, map<string, bool> &vis, int &res);
 void printLogs();
 struct Event
 {
@@ -46,30 +47,44 @@ public:
         return clock[process];
     }
 };
+
+
 class Process
 {
 private:
     string name;
     vector<Event> events;
-    queue<Event> messageQueue;
     map<string, vector<string>> received;
+    int count;
+    vector<string> sent;
 
 public:
     Process() {}
     Process(string _name)
     {
         name = _name;
+        count = 0;
     }
 
     int start = 0;
+    queue<Event> messageQueue;
 
     string getName()
     {
         return name;
     }
+    int getCount(){
+        return count;
+    }
+    void updateCount(){
+        count++;
+    }
     void updateMsgQ(Event msgQ)
     {
         messageQueue.push(msgQ);
+    }
+    void changeQ(queue<Event> q){
+        messageQueue = q;
     }
     void updateEvents(vector<Event> _events)
     {
@@ -79,6 +94,67 @@ public:
     void receive(string sender, string msg)
     {
         received[sender].push_back(msg);
+    }
+
+    Event getEvent() {
+        return events[start];
+    }
+    string detectCycle(string name, map<string, bool> &vis, int &res, map<string, Process> &processes, Event event, LamportClock &clock)
+    {
+        // cout << name << "-->" << wfg[name] << endl;
+        string str = "";
+        str += name + event.message;
+        if (vis[name] == true)
+        {
+            res = 1; // deadlock
+            return name;
+        }
+        if (completed[wfg[name]] == true)
+        {
+            bool flag = false;
+            queue<Event> que = processes[name].messageQueue;
+            queue<Event> modified;
+            while (!que.empty())
+            {
+                Event sentEvent = que.front();
+                if (sentEvent.message == event.message && sentEvent.sender == event.sender)
+                {
+                    flag = true;
+                    que.pop();
+                    clock.incrementClock(name);
+                    event.timestamp = max(clock.getClock(name), sentEvent.timestamp + 1);
+                    clock.update(event.timestamp, name);
+                    string log = "received " + name + " " + event.message + " " + event.sender + " " + to_string(event.timestamp);
+                    logs.push_back(log);
+                    if (wfg.find(event.process) != wfg.end())
+                    {
+                        wfg.erase(event.process);
+                        visited[event.process] = false;
+                    }
+                    processes[name].updateCount();
+                    processes[name].start++;
+                    break;
+                }
+                else{
+                    modified.push(sentEvent);
+                }
+                que.pop();
+            }
+            processes[name].changeQ(modified);
+            if (!flag)
+            {
+                res = 2;
+                return wfg[name];
+            }
+            else
+            {
+                
+                return "";
+            }
+        }
+        vis[name] = true;
+        Event e = processes[wfg[name]].getEvent();
+        return detectCycle(wfg[name], vis, res, processes, e, clock);
     }
     void execute(LamportClock &clock, map<string, Process> &processes, set<string> &waitingProcesses)
     {
@@ -95,11 +171,15 @@ public:
                 for (auto r : event.receiverList)
                 {
                     event.sender = name;
-                    if(processes.find(r) == processes.end()) {
-                        cerr<<"Receiver "<<r<<" does not exist! "<< endl;
+                    if (processes.find(r) == processes.end())
+                    {
+                        cerr << "Receiver " << r << " does not exist! " << endl;
                         exit(1);
                     }
                     processes[r].updateMsgQ(event);
+                    string str = r;
+                    str += event.message;
+                    sent.push_back(str);
                     log += r;
                 }
                 log += ") " + to_string(event.timestamp);
@@ -120,11 +200,12 @@ public:
                             flag = true;
                             que.pop();
                             clock.incrementClock(name);
-                            event.timestamp = max(clock.getClock(name), sentEvent.timestamp+1);
+                            event.timestamp = max(clock.getClock(name), sentEvent.timestamp + 1);
                             clock.update(event.timestamp, name);
                             string log = "received " + name + " " + event.message + " " + event.sender + " " + to_string(event.timestamp);
                             logs.push_back(log);
-                            if(wfg.find(event.process) != wfg.end()){
+                            if (wfg.find(event.process) != wfg.end())
+                            {
                                 wfg.erase(event.process);
                                 visited[event.process] = false;
                             }
@@ -135,22 +216,42 @@ public:
                     if (!flag)
                     {
                         start = i;
-                        if (pending.empty())
+                        // requireds[name] = event;
+                        // if (start != i)
+                        if (visited[name] == false)
                         {
-                            string name = event.process;
-                            printLogs();
-                            cerr << name << " received msg before it is sent | SENDER DIDN'T SEND" << endl;
-                            exit(1);
+                            pending.push(event.process);
+                            wfg[name] = event.sender;
+                            visited[name] = true;
                         }
-                        if(visited[event.sender] == true) {
-                            string name = event.process;
-                            printLogs();
-                            cerr << "system deadlocked, " <<event.sender<<" is waiting and is waited for"<< endl;
-                            exit(1);
+                        else
+                        {
+
+                            map<string, bool> vis;
+                            int res = 3;
+                            if (visited[event.sender] || pending.empty())
+                            {
+                                wfg[event.process] = event.sender;
+                                string nm = detectCycle(name, vis, res, processes, event, clock);
+
+                                if (res == 1)
+                                {
+                                    printLogs();
+                                    cerr << nm << " is waiting and is waited for. SYSTEM DEADLOCKED!" << endl;
+                                    exit(1);
+                                }
+                                else if (res == 2)
+                                {
+                                    printLogs();
+                                    cerr << "Received msg before it is sent. " << nm << " disn't send the required message. SYSTEM STUCK! " << endl;
+                                    exit(1);
+                                }
+                            }
+                            pending.push(event.process);
+                            wfg[event.process] = event.sender;
+                            visited[event.process] = true;
                         }
-                        pending.push(event.process);
-                        wfg[event.process] = event.sender;
-                        visited[event.process] = true;
+
                         break;
                     }
                 }
@@ -168,9 +269,14 @@ public:
                 string log = "printed " + name + " " + event.message + " " + to_string(event.timestamp);
                 logs.push_back(log);
             }
+            count++;
+        }
+
+        if (count == events.size())
+        {
+            completed[name] = true;
         }
     }
-
 };
 
 void printLogs()
@@ -197,12 +303,13 @@ int main()
     {
         if (line.size() == 0)
         {
-            while (!pending.empty()){
+            while (!pending.empty())
+            {
                 string p = pending.front();
                 pending.pop();
                 processes[p].execute(clock, processes, waitingProcesses);
             }
-            
+
             printLogs();
             break;
         }
@@ -224,7 +331,7 @@ int main()
                 ss >> processName;
                 if (!processesQueue.empty())
                 {
-                    cerr << "Error: Process " << processesQueue.front() << " has not ended." <<lineNumber<< endl;
+                    cerr << "Error: Process " << processesQueue.front() << " has not ended." << lineNumber << endl;
                     exit(1);
                 }
                 if (processes.find(processName) == processes.end())
@@ -236,7 +343,7 @@ int main()
                 }
                 else
                 {
-                    cerr << "Error: Process " << processName << " already exists." <<lineNumber<< endl;
+                    cerr << "Error: Process " << processName << " already exists." << lineNumber << endl;
                     exit(1);
                 }
             }
@@ -257,6 +364,7 @@ int main()
                     if (receivers[0] != '(' || receivers[receivers.size() - 1] != ')')
                     {
                         cerr << "Incorrect input format, brackets inappropriate " << lineNumber << endl;
+                        exit(1);
                     }
                     receivers = receivers.substr(1, receivers.size() - 2); // Remove parentheses
                     string message;
@@ -364,4 +472,4 @@ int main()
 // print abc
 // print def
 // end process
-// 
+//
