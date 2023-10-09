@@ -83,7 +83,7 @@ begin process p4
 print def
 end process
 ```
-![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/b9ccc60b-87e0-46f5-b4b2-3e677e989df5)
+![Uploading image.png…]()
 
 5
 ```
