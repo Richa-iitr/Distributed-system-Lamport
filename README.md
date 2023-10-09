@@ -116,5 +116,22 @@ end process
 ```
 ![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/8524fb24-359b-4e94-ac7d-d4eb5ccefd37)
 
+7
+```
+begin process p1
+send (p2) m1
+print abc
+print def
+end process
+begin process p2
+print x1
+recv p1 m1
+print x2
+send (p1) m2
+print x3
+end process
+```
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/42f86ecd-fe86-44be-a832-bed03768d4d3)
 
+8
 
