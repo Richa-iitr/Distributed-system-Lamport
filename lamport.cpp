@@ -1,12 +1,13 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-
 vector<string> logs;
 queue<string> pending;
-map<string,string> wfg;
-map<string,bool> visited;
+map<string, string> wfg;
+map<string, bool> visited;
+map<string, bool> completed;
 
+string detectCycle(string name, map<string, bool> &vis, int &res);
 void printLogs();
 struct Event
 {
@@ -46,30 +47,44 @@ public:
         return clock[process];
     }
 };
+
+
 class Process
 {
 private:
     string name;
     vector<Event> events;
-    queue<Event> messageQueue;
     map<string, vector<string>> received;
+    int count;
+    vector<string> sent;
 
 public:
     Process() {}
     Process(string _name)
     {
         name = _name;
+        count = 0;
     }
 
     int start = 0;
+    queue<Event> messageQueue;
 
     string getName()
     {
         return name;
     }
+    int getCount(){
+        return count;
+    }
+    void updateCount(){
+        count++;
+    }
     void updateMsgQ(Event msgQ)
     {
         messageQueue.push(msgQ);
+    }
+    void changeQ(queue<Event> q){
+        messageQueue = q;
     }
     void updateEvents(vector<Event> _events)
     {
@@ -79,6 +94,67 @@ public:
     void receive(string sender, string msg)
     {
         received[sender].push_back(msg);
+    }
+
+    Event getEvent() {
+        return events[start];
+    }
+    string detectCycle(string name, map<string, bool> &vis, int &res, map<string, Process> &processes, Event event, LamportClock &clock)
+    {
+        // cout << name << "-->" << wfg[name] << endl;
+        string str = "";
+        str += name + event.message;
+        if (vis[name] == true)
+        {
+            res = 1; // deadlock
+            return name;
+        }
+        if (completed[wfg[name]] == true)
+        {
+            bool flag = false;
+            queue<Event> que = processes[name].messageQueue;
+            queue<Event> modified;
+            while (!que.empty())
+            {
+                Event sentEvent = que.front();
+                if (sentEvent.message == event.message && sentEvent.sender == event.sender)
+                {
+                    flag = true;
+                    que.pop();
+                    clock.incrementClock(name);
+                    event.timestamp = max(clock.getClock(name), sentEvent.timestamp + 1);
+                    clock.update(event.timestamp, name);
+                    string log = "received " + name + " " + event.message + " " + event.sender + " " + to_string(event.timestamp);
+                    logs.push_back(log);
+                    if (wfg.find(event.process) != wfg.end())
+                    {
+                        wfg.erase(event.process);
+                        visited[event.process] = false;
+                    }
+                    processes[name].updateCount();
+                    processes[name].start++;
+                    break;
+                }
+                else{
+                    modified.push(sentEvent);
+                }
+                que.pop();
+            }
+            processes[name].changeQ(modified);
+            if (!flag)
+            {
+                res = 2;
+                return wfg[name];
+            }
+            else
+            {
+                
+                return "";
+            }
+        }
+        vis[name] = true;
+        Event e = processes[wfg[name]].getEvent();
+        return detectCycle(wfg[name], vis, res, processes, e, clock);
     }
     void execute(LamportClock &clock, map<string, Process> &processes, set<string> &waitingProcesses)
     {
@@ -95,7 +171,15 @@ public:
                 for (auto r : event.receiverList)
                 {
                     event.sender = name;
+                    if (processes.find(r) == processes.end())
+                    {
+                        cerr << "Receiver " << r << " does not exist! " << endl;
+                        exit(1);
+                    }
                     processes[r].updateMsgQ(event);
+                    string str = r;
+                    str += event.message;
+                    sent.push_back(str);
                     log += r;
                 }
                 log += ") " + to_string(event.timestamp);
@@ -116,11 +200,12 @@ public:
                             flag = true;
                             que.pop();
                             clock.incrementClock(name);
-                            event.timestamp = max(clock.getClock(name), sentEvent.timestamp+1);
+                            event.timestamp = max(clock.getClock(name), sentEvent.timestamp + 1);
                             clock.update(event.timestamp, name);
                             string log = "received " + name + " " + event.message + " " + event.sender + " " + to_string(event.timestamp);
                             logs.push_back(log);
-                            if(wfg.find(event.process) != wfg.end()){
+                            if (wfg.find(event.process) != wfg.end())
+                            {
                                 wfg.erase(event.process);
                                 visited[event.process] = false;
                             }
@@ -131,22 +216,42 @@ public:
                     if (!flag)
                     {
                         start = i;
-                        if (pending.empty())
+                        // requireds[name] = event;
+                        // if (start != i)
+                        if (visited[name] == false)
                         {
-                            string name = event.process;
-                            printLogs();
-                            cerr << name << " received msg before it is sent | SENDER DIDN'T SEND" << endl;
-                            exit(1);
+                            pending.push(event.process);
+                            wfg[name] = event.sender;
+                            visited[name] = true;
                         }
-                        if(visited[event.sender] == true) {
-                            string name = event.process;
-                            printLogs();
-                            cerr << "system deadlocked, " <<event.sender<<" is waiting and is waited for"<< endl;
-                            exit(1);
+                        else
+                        {
+
+                            map<string, bool> vis;
+                            int res = 3;
+                            if (visited[event.sender] || pending.empty())
+                            {
+                                wfg[event.process] = event.sender;
+                                string nm = detectCycle(name, vis, res, processes, event, clock);
+
+                                if (res == 1)
+                                {
+                                    printLogs();
+                                    cerr << nm << " is waiting and is waited for. SYSTEM DEADLOCKED!" << endl;
+                                    exit(1);
+                                }
+                                else if (res == 2)
+                                {
+                                    printLogs();
+                                    cerr << "Received msg before it is sent. " << nm << " disn't send the required message. SYSTEM STUCK! " << endl;
+                                    exit(1);
+                                }
+                            }
+                            pending.push(event.process);
+                            wfg[event.process] = event.sender;
+                            visited[event.process] = true;
                         }
-                        pending.push(event.process);
-                        wfg[event.process] = event.sender;
-                        visited[event.process] = true;
+
                         break;
                     }
                 }
@@ -164,9 +269,14 @@ public:
                 string log = "printed " + name + " " + event.message + " " + to_string(event.timestamp);
                 logs.push_back(log);
             }
+            count++;
+        }
+
+        if (count == events.size())
+        {
+            completed[name] = true;
         }
     }
-
 };
 
 void printLogs()
@@ -193,12 +303,13 @@ int main()
     {
         if (line.size() == 0)
         {
-            while (!pending.empty()){
+            while (!pending.empty())
+            {
                 string p = pending.front();
                 pending.pop();
                 processes[p].execute(clock, processes, waitingProcesses);
             }
-            
+
             printLogs();
             break;
         }
@@ -220,7 +331,7 @@ int main()
                 ss >> processName;
                 if (!processesQueue.empty())
                 {
-                    cerr << "Error: Process " << processesQueue.front() << " has not ended." <<lineNumber<< endl;
+                    cerr << "Error: Process " << processesQueue.front() << " has not ended." << lineNumber << endl;
                     exit(1);
                 }
                 if (processes.find(processName) == processes.end())
@@ -232,7 +343,7 @@ int main()
                 }
                 else
                 {
-                    cerr << "Error: Process " << processName << " already exists." <<lineNumber<< endl;
+                    cerr << "Error: Process " << processName << " already exists." << lineNumber << endl;
                     exit(1);
                 }
             }
@@ -253,6 +364,7 @@ int main()
                     if (receivers[0] != '(' || receivers[receivers.size() - 1] != ')')
                     {
                         cerr << "Incorrect input format, brackets inappropriate " << lineNumber << endl;
+                        exit(1);
                     }
                     receivers = receivers.substr(1, receivers.size() - 2); // Remove parentheses
                     string message;
@@ -360,413 +472,4 @@ int main()
 // print abc
 // print def
 // end process
-// 
-
-
-
-// #include <bits/stdc++.h>
-// using namespace std;
-
-// vector<string> logs;
-// struct Event
-// {
-//     int linenumber;
-//     string type;
-//     string process;
-//     string sender;
-//     vector<string> receiverList;
-//     string receiver;
-//     string message;
-//     int timestamp;
-
-//     Event(string type, string process, string message, int timestamp)
-//         : type(type), process(process), message(message), timestamp(timestamp) {}
-
-//     Event(string type, string process, string message, string sender, string receiver, int timestamp)
-//         : type(type), process(process), message(message), sender(sender), receiver(receiver), timestamp(timestamp) {}
-// };
-
-// class LamportClock
-// {
-// private:
-//     map<string, int> clock;
-
-// public:
-//     void incrementClock(string process)
-//     {
-//         clock[process]++;
-//     }
-
-//     int getClock(string process)
-//     {
-//         return clock[process];
-//     }
-// };
-
-// class Process
-// {
-// private:
-//     string name;
-//     vector<Event> events;
-//     queue<Event> messageQueue;
-
-// public:
-//     Process() {}
-//     Process(string _name)
-//     {
-//         name = _name;
-//     }
-
-//     void execute(Event event, LamportClock &clock, map<string, Process> &processes, set<string> &waitingProcesses)
-//     {
-//         if (event.type == "send")
-//         {
-//             clock.incrementClock(name);
-//             event.timestamp = clock.getClock(name);
-//             messageQueue.push(event);
-//             string log = "";
-//             log+= "sent "+event.process+" "+event.message+" (";
-//             for(auto r: event.receiverList){
-//                 log += r;
-//             }
-//             log+=") "+ event.timestamp;
-//         }
-//         else if (event.type == "recv")
-//         {
-//             if (processes.find(event.sender) != processes.end())
-//             {
-//                 // Simulate message receiving
-//                 while (!messageQueue.empty())
-//                 {
-//                     Event sentEvent = messageQueue.front();
-//                     if (sentEvent.message == event.message && sentEvent.sender == event.sender)
-//                     {
-//                         messageQueue.pop();
-//                         clock.incrementClock(name);
-//                         event.timestamp = max(clock.getClock(name), sentEvent.timestamp) + 1;
-//                         break;
-//                     }
-//                     messageQueue.pop();
-//                 }
-//             }
-//             else
-//             {
-//                 cerr << "Error: Process " << event.sender << " not found when receiving message." << endl;
-//                 exit(1);
-//             }
-//         }
-//         else if (event.type == "print")
-//         {
-//             clock.incrementClock(name);
-//             event.timestamp = clock.getClock(name);
-//         }
-//         events.push_back(event);
-
-//         // Check for deadlock
-//         // if (event.type == "recv")
-//         // {
-//         //     waitingProcesses.erase(event.process);
-//         // }
-//         // else if (event.type == "send")
-//         // {
-//         //     for (const string &receiver : event.receiverList)
-//         //     {
-//         //         waitingProcesses.insert(receiver);
-//         //     }
-//         // }
-//         // if (waitingProcesses.empty())
-//         // {
-//         //     printEvents();
-//         //     cerr << "Error: Deadlock detected." << endl;
-//         //     exit(1);
-//         // }
-//     }
-
-//     void printEvents()
-//     {
-//         for (const Event &event : events)
-//         {
-//             if (event.type == "send")
-//             {
-//                 cout << "sent " << event.process << " " << event.message << " (" << event.receiver << ") " << event.timestamp << endl;
-//             }
-//             else if (event.type == "recv")
-//             {
-//                 cout << "received " << event.process << " " << event.message << " " << event.sender << " " << event.timestamp << endl;
-//             }
-//             else if (event.type == "print")
-//             {
-//                 cout << "printed " << event.process << " " << event.message << " " << event.timestamp << endl;
-//             }
-//         }
-//     }
-// };
-
-// int main()
-// {
-//     map<string, Process> processes;
-//     LamportClock clock;
-//     set<string> waitingProcesses;
-
-//     string line;
-//     int lineNumber = 0;
-//     vector<Event> events;
-//     string processName;
-
-//     queue<string> processesQueue;
-
-//     while (getline(cin, line))
-//     {
-//         if (line.size() == 0)
-//         {
-
-//             for (auto e : events)
-//             {
-//                 cout << "line: " << e.linenumber << endl;
-//                 cout << "type: " << e.type << endl;
-//                 cout << "process: " << e.process << endl;
-//                 cout << "sender: " << e.sender << endl;
-//                 cout << "receiver: " << e.receiver << endl;
-//                 cout << "message: " << e.message << endl;
-//                 cout << "timestamp: " << e.timestamp << endl;
-//                 break;
-//             }
-
-//             for (auto event : events)
-//             {
-//                 if (event.type == "send")
-//                 {
-//                     string _process = event.process;
-//                     for (const string &receiver : event.receiverList)
-//                     {
-//                         if (processes.find(receiver) != processes.end())
-//                         {
-//                             event.receiver = receiver;
-//                             processes[processName].execute(event, clock, processes, waitingProcesses);
-//                         }
-//                         else
-//                         {
-//                             cerr << "Error: Receiver process " << receiver << " not found for executing command at: " << event.linenumber << "." << endl;
-//                             exit(1);
-//                         }
-//                     }
-//                 }
-//                 else if(event.type == "recv") {
-//                     processes[processName].execute(event, clock, processes, waitingProcesses);
-//                 }
-//                 else if(event.type == "print") {
-//                     processes[processName].execute(event, clock, processes, waitingProcesses);
-//                 }
-//             }
-//         }
-//         else
-//         {
-//             lineNumber++;
-//             stringstream ss(line);
-//             string command;
-//             ss >> command;
-//             if (command == "begin")
-//             {
-//                 string process;
-//                 ss >> process;
-//                 ss >> processName;
-//                 if (!processesQueue.empty())
-//                 {
-//                     cerr << "Error: Process " << processesQueue.front() << " has not ended." << endl;
-//                     exit(1);
-//                 }
-//                 if (processes.find(processName) == processes.end())
-//                 {
-//                     Process p(processName);
-//                     processesQueue.push(processName);
-//                     processes[processName] = p;
-//                 }
-//                 else
-//                 {
-//                     cerr << "Error: Process " << processName << " already exists." << endl;
-//                     exit(1);
-//                 }
-//             }
-
-//             else if (command == "send")
-//             {
-//                 if (processes.find(processName) != processes.end())
-//                 {
-//                     string receivers;
-//                     ss >> receivers;
-//                     cout << "receivers: " << receivers << endl;
-//                     cout << receivers.size();
-//                     receivers = receivers.substr(1, receivers.size() - 2); // Remove parentheses
-//                     string message;
-//                     ss >> message;
-//                     vector<string> receiverList;
-//                     stringstream receiverStream(receivers);
-//                     string receiver;
-//                     while (getline(receiverStream, receiver, ','))
-//                     {
-//                         if (receiver == processName)
-//                         {
-//                             cerr << "Error: Process " << processName << " sending to itself at line " << lineNumber << "." << endl;
-//                             exit(1);
-//                         }
-//                         receiverList.push_back(receiver);
-//                     }
-//                     Event event("send", processName, message, clock.getClock(processName));
-//                     event.receiverList = receiverList;
-//                     event.linenumber = lineNumber;
-//                     events.push_back(event);
-//                 }
-//                 else
-//                 {
-//                     cerr << "Error: Process " << processName << " already exists." << endl;
-//                     exit(1);
-//                 }
-//             }
-//             else if (command == "recv")
-//             {
-//                 if (processes.find(processName) != processes.end())
-//                 {
-//                     string sender;
-//                     ss >> sender;
-//                     string message;
-//                     ss >> message;
-//                     Event event("recv", processName, message, sender, processName, clock.getClock(processName));
-//                     event.linenumber = lineNumber;
-//                     events.push_back(event);
-//                 }
-//                 else
-//                 {
-//                     cerr << "Error: Process " << processName << " already exists." << endl;
-//                     exit(1);
-//                 }
-//             }
-//             else if (command == "print")
-//             {
-//                 if (processes.find(processName) != processes.end())
-//                 {
-//                     string message;
-//                     ss >> message;
-//                     Event event("print", processName, message, clock.getClock(processName));
-//                     event.linenumber = lineNumber;
-//                     events.push_back(event);
-//                 }
-//                 else
-//                 {
-//                     cerr << "Error: Process " << processName << " already exists." << endl;
-//                     exit(1);
-//                 }
-//             }
-
-//             else if (command == "end")
-//             {
-//                 if (processes.find(processName) != processes.end())
-//                 {
-//                     processesQueue.pop();
-//                     // processes[processName].printEvents();
-//                 }
-//                 else
-//                 {
-//                     cerr << "Error: Process " << processName << " not found when ending process on line " << lineNumber << "." << endl;
-//                     exit(1);
-//                 }
-//             }
-
-//             else
-//             {
-//                 cerr << "Error: Invalid command on line " << lineNumber << ": " << command << endl;
-//                 exit(1);
-//             }
-//         }
-//     }
-//     // while (getline(cin, line)) {
-//     //     cout<<line;
-//     //     lineNumber++;
-//     //     stringstream ss(line);
-//     //     string command;
-//     //     ss >> command;
-//     //     string processName;
-
-//     //     if (command == "begin") {
-//     //         string process;
-//     //         ss >> process;
-//     //         ss >> processName;
-//     //         cout<<processName<<endl;
-
-//     //     }
-//     //     else if (command == "send" || command == "recv" || command == "print") {
-//     //         // string processName;
-//     //         // ss >> processName;
-//     //         // string message;
-//     //         // ss >> message;
-//     //         // processName = processName.substr(0, processName.size() - 1);  // Remove trailing comma
-//     //         cout<<"process: "<<processName<<endl;
-
-//     //         if (processes.find(processName) != processes.end()) {
-//     //             if (command == "send") {
-//     //                 string receivers;
-//     //                 ss >> receivers;
-//     //                 cout<<"receivers: "<<receivers<<endl;
-//     //                 cout<<receivers.size();
-//     //                 receivers = receivers.substr(1, receivers.size() - 2);  // Remove parentheses
-//     //                 string message;
-//     //                 ss >> message;
-//     //                 vector<string> receiverList;
-//     //                 stringstream receiverStream(receivers);
-//     //                 string receiver;
-//     //                 while (getline(receiverStream, receiver, ',')) {
-//     //                     receiverList.push_back(receiver);
-//     //                 }
-//     //                 Event event("send", processName, message, clock.getClock(processName));
-//     //                 event.receiverList = receiverList;  // Store the receiver list for deadlock detection
-//     //                 for (const string& receiver : receiverList) {
-//     //                     if (processes.find(receiver) != processes.end()) {
-//     //                         event.receiver = receiver;
-//     //                         processes[processName].execute(event, clock, processes, waitingProcesses);
-//     //                     }
-//     //                     else {
-//     //                         cerr << "Error: Receiver process " << receiver << " not found." << endl;
-//     //                         exit(1);
-//     //                     }
-//     //                 }
-//     //             }
-//     //             else if (command == "recv") {
-//     //                 string sender;
-//     //                 ss >> sender;
-//     //                 string message;
-//     //                 ss >> message;
-//     //                 Event event("recv", processName, message, sender, processName, clock.getClock(processName));
-//     //                 processes[processName].execute(event, clock, processes, waitingProcesses);
-//     //             }
-//     //             else if (command == "print") {
-//     //                 string message;
-//     //                 ss >> message;
-//     //                 Event event("print", processName, message, clock.getClock(processName));
-//     //                 processes[processName].execute(event, clock, processes, waitingProcesses);
-//     //             }
-//     //         }
-//     //         else {
-//     //             cerr << "Error: Process " << processName << " not found when processing event on line " << lineNumber << "." << endl;
-//     //             exit(1);
-//     //         }
-//     //     }
-//     //     else if (command == "end") {
-//     //         if (processes.find(processName) != processes.end()) {
-//     //             processes[processName].printEvents();
-//     //         }
-//     //         else {
-//     //             cerr << "Error: Process " << processName << " not found when ending process on line " << lineNumber << "." << endl;
-//     //             exit(1);
-//     //         }
-//     //     }
-//     //     else {
-//     //         cerr << "Error: Invalid command on line " << lineNumber << ": " << command << endl;
-//     //         exit(1);
-//     //     }
-//     // }
-
-//     return 0;
-// }
-
-
-
-
+//
