@@ -63,7 +63,7 @@ begin process p4
 send (p3) m9
 end
 ```
-![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/b1b57d27-8339-4d36-9a9d-c0084ddfa4c3)
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/710a6649-17bb-4cf1-bc2d-71e0f0cc24c2)
 
 4
 ```
