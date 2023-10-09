@@ -8,6 +8,24 @@ map<string, bool> visited;
 map<string, bool> completed;
 vector<string> deadlock;
 
+/*  Highlevel overview
+    Maintain a pending queue of processes.
+    Put all the processes in the queue if no parse error occured.
+    Keep a class of Process, Event, Lamport Clock
+    Pop the queue elements and execute the events in the popped process.
+        - If the event is a send: 
+            - Update the messageQueue of receiving processes (messageQueue contains the list of sent messages to the process)
+            - Increment the clock and Log the message 
+        - If the event is receive
+            - if the messageQueue doesn't contain the required event, push the process back to pending queue to re-look after other processes executed
+            - update the index to restart execution and count to check if the process has finished or not
+            - if the process is revisited, check for deadlock or stuck program
+                - for deadlock look for cycle in the wait-for-graph (stored in wfg)
+                - for stuck code, check if there exists a complete process on which other processes are dependent but it didn't sent the event.
+            - if the execution occurs, update the clock of the process by taking maximum of received event+1, current clock of the process.
+        - If the event is print
+            - Update the clock and continue;
+*/ 
 
 void printLogs();
 
@@ -204,6 +222,7 @@ public:
                 {
                     // Simulate message receiving
                     queue<Event> que = messageQueue;
+                    queue<Event> modified;
                     while (!que.empty())
                     {
                         Event sentEvent = que.front();
@@ -222,9 +241,18 @@ public:
                                 visited[event.process] = false;
                             }
                             break;
+                        } else {
+                            modified.push(sentEvent);
                         }
                         que.pop();
                     }
+                    while(!que.empty()) {
+                        Event sentEvent = que.front();
+                        modified.push(sentEvent);
+                        que.pop();
+                    }
+                    changeQ(modified);
+                    
                     if (!flag)
                     {
                         start = i;
