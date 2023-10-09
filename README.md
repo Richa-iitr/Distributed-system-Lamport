@@ -2,8 +2,8 @@
 
 ## Code Run:
 `(Version: g++.exe (MinGW.org GCC-6.3.0-1) 6.3.0)`
-- Compile the code with the command: g++ lamport.cpp
-- Run the compiled program: ./a
+- Compile the code with the command: g++ -o tut6 lamport.cpp
+- Run the compiled program: ./tut6
 
 ## Sample Input/Output:
 *Input format*: write all the commands on newline, end command accepts any format starting with end  (end process, end process p1, end ), an input of newline (enter button twice) will print the output.
