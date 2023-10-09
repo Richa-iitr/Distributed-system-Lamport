@@ -173,7 +173,7 @@ public:
                 event.timestamp = clock.getClock(name);
 
                 string log = "";
-                log += "sent " + event.process + " " + event.message + " (";
+                log += "sent " + event.process + " " + event.message + " ( ";
                 for (auto r : event.receiverList)
                 {
                     event.sender = name;
@@ -186,7 +186,7 @@ public:
                     string str = r;
                     str += event.message;
                     sent.push_back(str);
-                    log += r;
+                    log += r+",";
                 }
                 log += ") " + to_string(event.timestamp);
                 logs.push_back(log);
