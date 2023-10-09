@@ -24,3 +24,97 @@ end process
 
 Output <br>
 ![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/8c4e85a7-591f-4f09-b711-f86a3593122d)
+
+2
+```
+begin process p1
+recv p2 m2
+send (p4) m4
+end process
+begin process p2
+recv p3 m3
+send (p1) m2
+end
+begin process p3
+recv p4 m1
+send (p2) m3
+end process
+begin process p4
+send (p3) m1
+end process
+```
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/56f79084-846b-41b9-b6cf-e6a602507f46)
+
+3
+```
+begin process p1
+recv p2 m2
+send (p4) m4
+end process
+begin process p2
+recv p3 m3
+send (p1) m2
+end
+begin process p3
+recv p4 m1
+send (p2) m3
+end process
+begin process p4
+send (p3) m9
+end
+```
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/b1b57d27-8339-4d36-9a9d-c0084ddfa4c3)
+
+4
+```
+begin process p1
+recv p2 m2
+send (p4) m4
+end process
+begin process p2
+recv p3 m3
+send (p1) m2
+end
+begin process p3
+recv p4 m1
+send (p2) m3
+end process
+begin process p4
+print def
+end process
+```
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/b9ccc60b-87e0-46f5-b4b2-3e677e989df5)
+
+5
+```
+begin process p1
+recv p2 m2
+end process
+begin process p2
+recv p1 m1
+end process
+```
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/adbb9b7a-954b-4d56-8307-2a113dc54e99)
+
+6
+```
+begin process p1
+recv p2 m2
+send (p4) m4
+end process
+begin process p2
+recv p3 m3
+send (p1) m2
+end
+begin process p3
+recv p4 m1
+send (p2) m3
+end process
+begin process p4
+recv p1 m4
+end process
+```
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/8524fb24-359b-4e94-ac7d-d4eb5ccefd37)
+
+
+
