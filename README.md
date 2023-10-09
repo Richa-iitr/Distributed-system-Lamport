@@ -29,6 +29,7 @@ print e26
 end process
 ```
 ![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/46f69333-8583-49a9-9ec3-55782a787331)
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/359796ee-adda-4e88-8681-98c7e632ab5f)
 
 2
 ```
@@ -48,7 +49,8 @@ begin process p4
 send (p3) m1
 end process
 ```
-![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/56f79084-846b-41b9-b6cf-e6a602507f46)
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/f2172613-eb72-4872-89a5-fc44a1bf6134)
+
 
 3
 ```
@@ -68,7 +70,7 @@ begin process p4
 send (p3) m9
 end
 ```
-![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/710a6649-17bb-4cf1-bc2d-71e0f0cc24c2)
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/262d4def-45da-4e40-acf5-7e0386977e3a)
 
 4
 ```
@@ -88,7 +90,7 @@ begin process p4
 print def
 end process
 ```
-![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/dd194fa4-25c8-4ab8-8771-71fbbf25a6aa)
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/d072ae15-4d82-4dd6-a816-f9e50f2b1a9c)
 
 5
 ```
@@ -99,7 +101,7 @@ begin process p2
 recv p1 m1
 end process
 ```
-![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/1f9a4a71-8bba-414b-b32b-d59d069f9310)
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/09638c79-aff0-42ed-8772-2832873d1e09)
 
 6
 ```
@@ -119,7 +121,7 @@ begin process p4
 recv p1 m4
 end process
 ```
-![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/960206af-ec68-44c6-af14-8addec72e834)
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/9e5b5f20-b4c7-4df9-bea6-c3bee54cb06d)
 
 7
 ```
@@ -136,6 +138,58 @@ send (p1) m2
 print x3
 end process
 ```
-![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/42f86ecd-fe86-44be-a832-bed03768d4d3)
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/3fc8dd7f-31c4-4dce-94f5-1747ac3662a8)
+
+8
+```
+begin process p1
+send (p2,p3) m1
+end process
+begin process p2
+recv p1 m1
+end process
+begin process p3
+recv p1 m1
+end process
+
+```
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/7ce94fa4-56eb-4ee5-a43e-b9b44d00e15f)
+
+9
+```
+begin process p1
+send (p2) m1
+send (p2) m1
+end process
+begin process p2
+recv p1 m1
+recv p1 m1
+end process
+```
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/d8d757a3-d95e-4ec2-b784-d0bc7d666ba5)
+
+10
+```
+begin process p1
+send (p2) m1
+end process
+begin process p2
+recv p1 m1
+recv p1 m1
+end process
+```
+![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/860f9ca8-ffc4-4eab-b617-52d7f8e13902)
+
+## Errors Caught
+- Receiver process does not exist.
+- System deadlock
+- System stuck (message needed to proceed not sent and deadlock is not there)
+- Sender process does not exist
+- Incorrect input format
+- Starting new process before ending previous
+- Starting the same process again
+- Empty receivers, message
+- Sending msg to itself
+- Incorrect command etc.
 
 
