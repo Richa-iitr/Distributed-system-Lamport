@@ -1,6 +1,14 @@
 # AOS-2023
 
-Input<br>
+## Code Run:
+`(Version: g++.exe (MinGW.org GCC-6.3.0-1) 6.3.0)`
+- Compile the code with the command: g++ lamport.cpp
+- Run the compiled program: ./a
+
+## Sample Input/Output:
+*Input format*: write all the commands on newline, end command accepts any format starting with end  (end process, end process p1, end ), an input of newline (enter button twice) will print the output.
+
+1. 
 ```
 begin process p1
 print e11
@@ -21,9 +29,6 @@ print e26
 end process
 ```
 ![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/46f69333-8583-49a9-9ec3-55782a787331)
-
-Output <br>
-![image](https://github.com/Richa-iitr/AOS-2023/assets/76250660/8c4e85a7-591f-4f09-b711-f86a3593122d)
 
 2
 ```
