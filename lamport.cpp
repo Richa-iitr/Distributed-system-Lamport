@@ -6,9 +6,11 @@ queue<string> pending;
 map<string, string> wfg;
 map<string, bool> visited;
 map<string, bool> completed;
+vector<string> deadlock;
 
-string detectCycle(string name, map<string, bool> &vis, int &res);
+
 void printLogs();
+
 struct Event
 {
     int linenumber;
@@ -26,6 +28,8 @@ struct Event
     Event(string type, string process, string message, string sender, string receiver, int timestamp)
         : type(type), process(process), message(message), sender(sender), receiver(receiver), timestamp(timestamp) {}
 };
+
+
 class LamportClock
 {
 private:
@@ -99,17 +103,19 @@ public:
     Event getEvent() {
         return events[start];
     }
-    vector<string> detectCycle(string name, map<string, bool> &vis, int &res, map<string, Process> &processes, Event event, LamportClock &clock)
+    vector<string> detectCycle(string name, map<string, bool> &vis, int &res, map<string, Process> &processes, Event event, LamportClock &clock, vector<string> cycle)
     {
         // cout << name << "-->" << wfg[name] << endl;
         vector<string> ret;
         string str = "";
+        cycle.push_back(name+ "<" + event.message+">");
         str += name + event.message;
         if (vis[name] == true)
         {
             res = 1; // deadlock
             ret.push_back(name);
             ret.push_back(wfg[name]);
+            deadlock = cycle;
             return ret;
         }
         if (completed[wfg[name]] == true)
@@ -160,7 +166,7 @@ public:
         }
         vis[name] = true;
         Event e = processes[wfg[name]].getEvent();
-        return detectCycle(wfg[name], vis, res, processes, e, clock);
+        return detectCycle(wfg[name], vis, res, processes, e, clock, cycle);
     }
     void execute(LamportClock &clock, map<string, Process> &processes, set<string> &waitingProcesses)
     {
@@ -173,7 +179,7 @@ public:
                 event.timestamp = clock.getClock(name);
 
                 string log = "";
-                log += "sent " + event.process + " " + event.message + " ( ";
+                log += "sent " + event.process + " " + event.message + " (";
                 for (auto r : event.receiverList)
                 {
                     event.sender = name;
@@ -186,7 +192,7 @@ public:
                     string str = r;
                     str += event.message;
                     sent.push_back(str);
-                    log += r+",";
+                    log += r+" ";
                 }
                 log += ") " + to_string(event.timestamp);
                 logs.push_back(log);
@@ -238,12 +244,22 @@ public:
                             if (visited[event.sender] || pending.empty())
                             {
                                 wfg[event.process] = event.sender;
-                                vector<string> nm = detectCycle(name, vis, res, processes, event, clock);
+                                vector<string> rndm;
+                                vector<string> nm = detectCycle(name, vis, res, processes, event, clock, rndm);
 
                                 if (res == 1)
                                 {
                                     printLogs();
                                     cerr << nm[0] << " is waiting for " <<nm[1]<<" which in turn is waiting. SYSTEM DEADLOCKED!" << endl;
+                                    for(int i=0; i<deadlock.size();i++) {
+                                        string a = deadlock[i];
+                                        cout<<a;
+                                        if(i!=deadlock.size()-1){
+                                            cout<<"->";
+                                        } else {
+                                            cout<<endl;
+                                        }
+                                    }
                                     exit(1);
                                 }
                                 else if (res == 2)
