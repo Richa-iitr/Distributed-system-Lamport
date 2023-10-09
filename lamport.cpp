@@ -99,15 +99,18 @@ public:
     Event getEvent() {
         return events[start];
     }
-    string detectCycle(string name, map<string, bool> &vis, int &res, map<string, Process> &processes, Event event, LamportClock &clock)
+    vector<string> detectCycle(string name, map<string, bool> &vis, int &res, map<string, Process> &processes, Event event, LamportClock &clock)
     {
         // cout << name << "-->" << wfg[name] << endl;
+        vector<string> ret;
         string str = "";
         str += name + event.message;
         if (vis[name] == true)
         {
             res = 1; // deadlock
-            return name;
+            ret.push_back(name);
+            ret.push_back(wfg[name]);
+            return ret;
         }
         if (completed[wfg[name]] == true)
         {
@@ -144,12 +147,15 @@ public:
             if (!flag)
             {
                 res = 2;
-                return wfg[name];
+                ret.push_back(wfg[name]);
+                ret.push_back(name);
+                ret.push_back(event.message);
+                return ret;
             }
             else
             {
                 
-                return "";
+                return ret;
             }
         }
         vis[name] = true;
@@ -232,18 +238,18 @@ public:
                             if (visited[event.sender] || pending.empty())
                             {
                                 wfg[event.process] = event.sender;
-                                string nm = detectCycle(name, vis, res, processes, event, clock);
+                                vector<string> nm = detectCycle(name, vis, res, processes, event, clock);
 
                                 if (res == 1)
                                 {
                                     printLogs();
-                                    cerr << nm << " is waiting and is waited for. SYSTEM DEADLOCKED!" << endl;
+                                    cerr << nm[0] << " is waiting for " <<nm[1]<<" which in turn is waiting. SYSTEM DEADLOCKED!" << endl;
                                     exit(1);
                                 }
                                 else if (res == 2)
                                 {
                                     printLogs();
-                                    cerr << "Received msg before it is sent. " << nm << " disn't send the required message. SYSTEM STUCK! " << endl;
+                                    cerr << "Appropriate message not sent. " << nm[0] << " disn't send the required message "<<nm[2]<<" to "<<nm[1]<<". SYSTEM STUCK! " << endl;
                                     exit(1);
                                 }
                             }
