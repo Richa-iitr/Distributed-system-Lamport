@@ -1,4 +1,4 @@
-# AOS-2023
+# Lamport Clock for Distributed Systems
 
 ## Code Run:
 `(Version: g++.exe (MinGW.org GCC-6.3.0-1) 6.3.0)`
