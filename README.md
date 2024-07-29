@@ -1,5 +1,5 @@
 # Lamport Clock for Distributed Systems
-
+Simulation of distributed system with lamport clock to determine the order of events among multiple processes. Identifies logical order of events with timestamps, deadlocks and stuck processes using wait-for graphs to track dependencies between processes.
 ## Code Run:
 `(Version: g++.exe (MinGW.org GCC-6.3.0-1) 6.3.0)`
 - Compile the code with the command: g++ -o tut6 lamport.cpp
